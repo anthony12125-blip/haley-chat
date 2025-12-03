@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HaleyOS Chat</title>
+    <title>HaleyOS Chat - Dev Mode</title>
     <style>
         * {
             margin: 0;
@@ -66,6 +66,16 @@
             border-radius: 18px;
             word-wrap: break-word;
             animation: slideIn 0.3s ease;
+            position: relative;
+        }
+
+        /* NEW TIMESTAMP STYLING */
+        .timestamp {
+            font-size: 0.75rem;
+            margin-top: 5px;
+            opacity: 0.8;
+            text-align: right;
+            font-variant-numeric: tabular-nums; /* Keeps numbers monospaced for alignment */
         }
 
         @keyframes slideIn {
@@ -85,10 +95,18 @@
             color: white;
         }
 
+        .message.user .timestamp {
+            color: rgba(255, 255, 255, 0.8);
+        }
+
         .message.assistant {
             align-self: flex-start;
             background: #f1f3f4;
             color: #333;
+        }
+
+        .message.assistant .timestamp {
+            color: #666;
         }
 
         .message.error {
@@ -163,10 +181,7 @@
             <div class="status" id="status">Connecting...</div>
         </div>
         <div class="messages" id="messages">
-            <div class="message assistant">
-                Hello! I'm HaleyOS. Type a message below to chat with me.
             </div>
-        </div>
         <div class="input-area">
             <input 
                 type="text" 
@@ -185,11 +200,19 @@
         const sendBtn = document.getElementById('sendBtn');
         const statusDiv = document.getElementById('status');
 
-        // Test connection on load
+        // Initial welcome message
+        window.onload = function() {
+            addMessage("Hello! I'm HaleyOS. Type a message below to chat with me.", 'assistant');
+            testConnection();
+            messageInput.focus();
+        };
+
         async function testConnection() {
             try {
-                const response = await fetch(BACKEND_URL);
-                if (response.ok) {
+                // Modified to use a likely GET endpoint if /talk is POST-only
+                // Or allows failure without blocking UI, just visual status
+                const response = await fetch(BACKEND_URL); 
+                if (response.ok || response.status === 405) {
                     statusDiv.textContent = '🟢 Connected';
                     statusDiv.style.color = '#90EE90';
                 } else {
@@ -205,7 +228,20 @@
         function addMessage(text, type) {
             const messageDiv = document.createElement('div');
             messageDiv.className = `message ${type}`;
-            messageDiv.textContent = text;
+            
+            // Create message content
+            const textDiv = document.createElement('div');
+            textDiv.textContent = text;
+            messageDiv.appendChild(textDiv);
+
+            // Create and append Timestamp
+            const timeDiv = document.createElement('div');
+            timeDiv.className = 'timestamp';
+            const now = new Date();
+            // Formats as HH:MM:SS
+            timeDiv.textContent = now.toLocaleTimeString([], { hour12: true, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            messageDiv.appendChild(timeDiv);
+
             messagesContainer.appendChild(messageDiv);
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }
@@ -230,15 +266,12 @@
             const message = messageInput.value.trim();
             if (!message) return;
 
-            // Disable input
             messageInput.disabled = true;
             sendBtn.disabled = true;
 
-            // Show user message
             addMessage(message, 'user');
             messageInput.value = '';
 
-            // Show loading
             showLoading();
 
             try {
@@ -265,15 +298,10 @@
                 console.error('Full error:', error);
             }
 
-            // Re-enable input
             messageInput.disabled = false;
             sendBtn.disabled = false;
             messageInput.focus();
         }
-
-        // Initialize
-        testConnection();
-        messageInput.focus();
     </script>
 </body>
 </html>
